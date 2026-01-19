@@ -1,0 +1,1576 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Keeph mini v0.9</title>
+
+  <!-- PWA -->
+  <meta name="theme-color" content="#f0f0f0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+
+  <style>
+    :root { --border:#cfcfcf; --muted:#666; --bg:#fafafa; }
+    body { font-family: system-ui, sans-serif; margin: 16px; background: var(--bg); }
+    h1 { margin: 0 0 6px; font-size: 20px; }
+    .small { font-size: 12px; color: var(--muted); margin: 6px 0 12px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input, button, select { font-size: 14px; }
+    button { padding: 6px 10px; border: 1px solid var(--border); border-radius: 10px; background:#fff; cursor: pointer; }
+    button:hover { background:#f3f3f3; }
+
+    /* responsive: desktop 2-col / mobile 1-col */
+    .wrap { display: grid; grid-template-columns: 380px 1fr; gap: 14px; align-items: start; }
+    @media (max-width: 980px){
+      .wrap { grid-template-columns: 1fr; }
+      body { margin: 12px; }
+    }
+
+    .panel { border: 1px solid var(--border); border-radius: 14px; padding: 12px; background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .panel h2 { margin: 0 0 10px; font-size: 16px; }
+    .tabs { display:flex; gap:8px; align-items:center; margin: 10px 0 14px; }
+    .tabbtn { border-radius: 999px; padding: 6px 12px; }
+    .tabbtn.active { outline: 2px solid #333; font-weight: 650; }
+    .sep { height: 1px; background: var(--border); margin: 10px 0; }
+
+    /* filter chips */
+    .chipbtn {
+      border: 1px solid var(--border);
+      background:#fff;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chipbtn.on { outline: 2px solid #333; font-weight: 650; }
+    .chipbtn:hover { background:#f3f3f3; }
+    .legend { display:flex; gap:6px; flex-wrap: wrap; margin-top: 8px; }
+    .legendItem { display:flex; gap:6px; align-items:center; font-size: 12px; color: var(--muted); }
+    .swatch { width: 10px; height: 10px; border-radius: 3px; border: 1px solid var(--border); }
+
+    /* Cards (Inbox) */
+    .card {
+      border: 1px solid #999; border-radius: 12px; padding: 10px; margin: 10px 0;
+      cursor: grab; background: #fff;
+      position: relative;
+      background: color-mix(in srgb, var(--cat-bg, #fff) 30%, #fff 70%);
+      border-color: color-mix(in srgb, var(--cat-bd, #999) 55%, #999 45%);
+    }
+    .card:active { cursor: grabbing; }
+    .card .top { display:flex; justify-content: space-between; gap:10px; align-items: baseline; }
+    .card .title { font-weight: 650; }
+    .card .meta { font-size: 12px; color: var(--muted); margin-top: 6px; display:flex; gap:10px; flex-wrap: wrap; cursor: pointer; }
+    .chip { border:1px solid var(--border); padding: 1px 8px; border-radius: 999px; background:#fafafa; }
+    .routineBadge { border:1px solid #999; padding: 1px 8px; border-radius: 999px; font-size:12px; }
+
+    /* v0.9: routine tint (gray unified across tabs) */
+    .routineCard {
+      border-color: color-mix(in srgb, #6f6f6f 60%, #666 40%);
+      background: color-mix(in srgb, #f0f0f0 45%, #fff 55%);
+    }
+    .routineCard .routineBadge {
+      background:#f0f0f0;
+      border-color:#6f6f6f;
+      color:#333;
+    }
+
+    .cardActions { position:absolute; top: 8px; right: 8px; display:flex; gap:6px; }
+    .tinyBtn { padding: 3px 8px; font-size: 12px; border-radius: 999px; }
+    .danger { border-color:#c55; }
+    .danger:hover { background:#fff0f0; }
+    .confirmArmed { outline: 2px solid #c55; font-weight: 650; }
+
+    .editArea { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; display:none; }
+    .editRow { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    .editRow .lbl { font-size: 12px; color: var(--muted); }
+
+    /* Stars */
+    .stars { display:flex; gap:2px; align-items:center; user-select: none; }
+    .star {
+      display:inline-block; width: 18px; text-align:center;
+      cursor: pointer; border-radius: 6px; padding: 2px 0;
+      border: 1px solid transparent;
+    }
+    .star:hover { border-color: var(--border); background:#f6f6f6; }
+    .star.on { color:#111; }
+    .star.off { color:#bbb; }
+
+    /* Right zone: Month view */
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .cal-head { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+    .cal-cell, .cal-dow {
+      border: 1px solid var(--border); border-radius: 10px; padding: 8px; background:#fff;
+      text-align: center; user-select: none;
+    }
+    .cal-dow { background:#f6f6f6; font-size: 12px; color: var(--muted); }
+    .cal-cell { cursor: pointer; }
+    .cal-cell.muted { color:#aaa; background:#fbfbfb; }
+    .cal-cell.selected { outline: 2px solid #333; }
+    .cal-cell .dot { display:inline-block; width: 6px; height: 6px; border-radius: 50%; background:#333; margin-left: 6px; vertical-align: middle; }
+
+    /* Right zone: Day schedule */
+    .day-head { display:flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .day-title { font-size: 16px; margin: 0; }
+    .slot {
+      border: 2px dashed #aaa; border-radius: 14px; padding: 10px; min-height: 120px;
+      background: #fff;
+    }
+    .inst {
+      border: 1px solid var(--border); border-radius: 14px; padding: 10px; margin: 10px 0;
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+      background: color-mix(in srgb, var(--cat-bg, #fff) 25%, #fff 75%);
+      border-color: color-mix(in srgb, var(--cat-bd, #999) 55%, #999 45%);
+    }
+    .inst.done { opacity: .62; background:#f7f7f7; }
+    .inst .title { font-weight: 600; display:flex; gap:10px; align-items: baseline; flex-wrap: wrap; }
+    .inst .time { font-size: 12px; color: var(--muted); margin-top: 4px; display:flex; gap:10px; flex-wrap: wrap; }
+    .inst .actions { display:flex; gap: 8px; align-items: center; }
+    .inst .actions label { font-size: 12px; color: var(--muted); display:flex; gap:6px; align-items:center; }
+    .btnSubtle { padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border); background:#fff; }
+    .btnSubtle:hover { background:#f3f3f3; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    /* List tab */
+    .listCard { border: 1px solid var(--border); border-radius: 14px; padding: 10px; margin: 10px 0; background:#fff; }
+    .listCard .head { display:flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .listCard .name { font-weight: 650; }
+    .listCard .sub { margin-top: 6px; font-size: 12px; color: var(--muted); display:flex; gap:10px; flex-wrap: wrap; }
+    .listCard .instList { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .listInst { display:flex; justify-content: space-between; gap:10px; align-items:center; padding: 8px 8px; border: 1px solid var(--border); border-radius: 12px; margin: 8px 0; }
+    .listInst.done { opacity: .62; background:#f7f7f7; }
+    .pill { border:1px solid var(--border); border-radius: 999px; padding: 1px 8px; background:#fafafa; font-size: 12px; color: var(--muted); }
+    .mini { font-size: 12px; }
+    .kcol { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+
+    /* inline add category */
+    .inlineBox { border:1px solid var(--border); border-radius: 12px; padding: 8px; background:#fff; display:none; }
+
+    /* category manager */
+    .mgrRow {
+      display:flex; gap:10px; align-items:center; flex-wrap: wrap;
+      padding: 8px; border: 1px solid var(--border); border-radius: 12px; margin: 8px 0;
+      background:#fff;
+    }
+    .mgrRow .nameIn { font-size: 14px; }
+    .mgrRow .note { font-size: 12px; color: var(--muted); }
+    .mgrRow .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+  <h1>Keeph mini v0.9（PWA確認用）</h1>
+  <p class="small">
+    v0.9：PWA（manifest + service worker）対応。ホーム画面追加でアプリっぽく起動・簡易オフライン。
+  </p>
+
+  <!-- Card input (global) -->
+  <div class="row">
+    <input id="title" placeholder="カード名（例：メール返信）" size="22"/>
+    <input id="dur" placeholder="分" size="6" />
+
+    <span class="small">分類：</span>
+    <select id="catSelect"></select>
+    <button id="openAddCatTop" class="tinyBtn">＋分類</button>
+
+    <span id="fixedTimeWrap" class="row" style="display:none;">
+      <span class="small">時刻：</span>
+      <input id="fixedTime" type="time" step="900" />
+    </span>
+
+    <span class="small">優先度：</span>
+    <span id="prioInput" class="stars" title="クリックで変更（0〜3）"></span>
+
+    <label class="small" style="display:flex; gap:6px; align-items:center;">
+      <input id="routineInput" type="checkbox" />
+      ルーティーン
+    </label>
+
+    <span class="small">締切：</span>
+    <input id="deadline" type="date" />
+
+    <button id="add">カード追加</button>
+  </div>
+
+  <div id="addCatTopBox" class="inlineBox" style="margin: 8px 0 12px;">
+    <div class="row">
+      <input id="newCatNameTop" placeholder="分類名（例：メモ / 連絡 / 買い物）" size="28" />
+      <button id="addCatTop">追加</button>
+      <button id="closeAddCatTop" class="tinyBtn">閉じる</button>
+      <span class="small">※追加分類は「タスク扱い（時刻調整可）」</span>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button id="tabMain" class="tabbtn">予定</button>
+    <button id="tabAll" class="tabbtn">一覧</button>
+  </div>
+
+  <!-- MAIN TAB -->
+  <div id="mainTab">
+    <div class="wrap">
+      <div class="panel">
+        <h2>未貼付（Inbox）</h2>
+
+        <div class="row" style="margin-bottom:8px;">
+          <span class="small">分類フィルタ：</span>
+          <div id="inboxFilters" class="row"></div>
+          <button id="resetInboxFilter" class="tinyBtn">全表示</button>
+        </div>
+
+        <div class="small">
+          ※貼付済カードは消えます。ただし「ルーティーンON」は残ります。
+          ルーティーンOFFにしても「1枚だけ」未貼付に残ります（次に貼ったら消える）。
+          メタ表示クリックで編集。
+        </div>
+        <div id="inbox"></div>
+
+        <div class="legend" id="inboxLegend"></div>
+      </div>
+
+      <div class="panel">
+        <!-- Month -->
+        <div id="rightMonth" style="display:none;">
+          <div class="day-head">
+            <h2 style="margin:0;">カレンダー</h2>
+            <div class="row">
+              <button id="prevMonth">◀</button>
+              <div id="monthLabel" style="min-width:120px; text-align:center; font-weight:650;"></div>
+              <button id="nextMonth">▶</button>
+              <button id="todayBtn">今日</button>
+            </div>
+          </div>
+
+          <div class="cal-head" style="margin-top:10px;">
+            <div class="cal-dow">日</div><div class="cal-dow">月</div><div class="cal-dow">火</div><div class="cal-dow">水</div><div class="cal-dow">木</div><div class="cal-dow">金</div><div class="cal-dow">土</div>
+          </div>
+          <div id="calendar" class="calendar"></div>
+          <div class="hint">日付クリックで「その日（貼付画面）」へ。</div>
+        </div>
+
+        <!-- Day -->
+        <div id="rightDay" style="display:none;">
+          <div class="row" style="margin-bottom:10px;">
+            <button id="backToCalendar">＜ カレンダー</button>
+            <span class="small">日付：</span>
+            <input id="datePicker" type="date"/>
+          </div>
+
+          <div class="day-head">
+            <h2 class="day-title" id="dayTitle">—</h2>
+          </div>
+
+          <div id="today" class="slot"></div>
+          <div class="hint">
+            左のカードをここへドラッグで追加。タスクは時刻自動配置→調整可。スケジュールはカードの時刻で入り、日側では時刻変更できません。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALL TAB -->
+  <div id="allTab" style="display:none;">
+    <div class="panel">
+      <div class="day-head">
+        <h2 style="margin:0;">一覧</h2>
+        <div class="row">
+          <span class="small">日付ジャンプ：</span>
+          <input id="jumpDate" type="date"/>
+          <button id="jumpBtn">その日を開く</button>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="row">
+        <span class="pill">Inbox表示</span><span id="countInbox" class="pill"></span>
+        <span class="pill">カード総数</span><span id="countCards" class="pill"></span>
+        <span class="pill">予定総数</span><span id="countInstances" class="pill"></span>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="row" style="margin-bottom:8px;">
+        <span class="small">分類フィルタ：</span>
+        <div id="allFilters" class="row"></div>
+        <button id="resetAllFilter" class="tinyBtn">全表示</button>
+      </div>
+
+      <h3 style="margin: 8px 0 6px; font-size: 14px;">分類の追加</h3>
+      <div class="row">
+        <input id="newCatName" placeholder="分類名（例：メモ / 連絡 / 買い物）" size="30" />
+        <button id="addCat">分類を追加</button>
+        <button id="toggleCatMgr" class="tinyBtn">分類を管理</button>
+        <span class="small">※追加した分類は「タスク扱い（時刻調整可）」</span>
+      </div>
+
+      <div id="catMgrBox" class="inlineBox" style="margin-top:10px;">
+        <div class="row" style="margin-bottom:6px;">
+          <strong>分類管理</strong>
+          <span class="small">（追加分類の名前変更・削除）</span>
+          <button id="closeCatMgr" class="tinyBtn">閉じる</button>
+        </div>
+        <div id="catMgrList"></div>
+        <div class="small">※「スケジュール」「タスク」は削除できません。削除時は確認POPUPが出ます。</div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div id="allList"></div>
+      <p class="small">※ここではカードの分類・時刻・ルーティーン・締切・優先度も編集できます。</p>
+    </div>
+  </div>
+
+<script>
+/* ========= Storage ========= */
+const KEY = "keeph-mini-v6";
+function load() {
+  const raw = localStorage.getItem(KEY);
+  if (!raw) return { cards: [], instances: [], categories: [] };
+  try { return JSON.parse(raw); } catch { return { cards: [], instances: [], categories: [] }; }
+}
+function save(state) { localStorage.setItem(KEY, JSON.stringify(state)); }
+function uid() { return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+
+/* ========= Time helpers ========= */
+function pad2(n){ return String(n).padStart(2,"0"); }
+function minToHHMM(m){
+  const h = Math.floor(m/60), mm = m%60;
+  return `${pad2(h)}:${pad2(mm)}`;
+}
+function hhmmToMin(s){
+  const [h,m] = s.split(":").map(x=>parseInt(x,10));
+  return h*60 + m;
+}
+function ymd(d){
+  const y = d.getFullYear(), m = pad2(d.getMonth()+1), day = pad2(d.getDate());
+  return `${y}-${m}-${day}`;
+}
+function formatJP(ymdStr){
+  const [y,m,d] = ymdStr.split("-").map(x=>parseInt(x,10));
+  return `${y}年${m}月${d}日`;
+}
+function addDays(date, n){
+  const d = new Date(date);
+  d.setDate(d.getDate()+n);
+  return d;
+}
+
+/* ========= Scheduling ========= */
+const STEP = 15;
+const DEFAULT_START = 9*60;
+function overlaps(aStart, aEnd, bStart, bEnd){
+  return Math.max(aStart, bStart) < Math.min(aEnd, bEnd);
+}
+function getDayInstances(state, dateStr){
+  return state.instances
+    .filter(x => x.date === dateStr)
+    .slice()
+    .sort((a,b)=> (a.start_min ?? 0) - (b.start_min ?? 0));
+}
+function findFirstFreeStart(state, dateStr, durationMin){
+  const dayInst = getDayInstances(state, dateStr).filter(x=>Number.isFinite(x.start_min));
+  const used = dayInst.map(x=>({s:x.start_min, e:x.start_min + x.duration_min}));
+  for (let t = DEFAULT_START; t <= 24*60 - durationMin; t += STEP){
+    let ok = true;
+    for (const u of used){
+      if (overlaps(t, t+durationMin, u.s, u.e)) { ok = false; break; }
+    }
+    if (ok) return t;
+  }
+  return DEFAULT_START;
+}
+function timeOptions(step=15){
+  const opts = [];
+  for(let m=0; m<24*60; m+=step) opts.push(minToHHMM(m));
+  return opts;
+}
+const TIME_OPTS = timeOptions(STEP);
+
+/* ========= Calendar ========= */
+function monthLabel(date){
+  return `${date.getFullYear()}年${date.getMonth()+1}月`;
+}
+function buildMonthCells(viewMonthDate){
+  const first = new Date(viewMonthDate.getFullYear(), viewMonthDate.getMonth(), 1);
+  const startDow = first.getDay();
+  const start = addDays(first, -startDow);
+  const cells = [];
+  for(let i=0;i<42;i++){
+    const d = addDays(start, i);
+    cells.push({ date: d, ymd: ymd(d), inMonth: d.getMonth() === viewMonthDate.getMonth() });
+  }
+  return cells;
+}
+
+/* ========= Stars UI ========= */
+function renderStars(container, value, onChange){
+  container.innerHTML = "";
+  const v = Math.max(0, Math.min(3, value|0));
+  for (let i=1;i<=3;i++){
+    const s = document.createElement("span");
+    s.className = "star " + (i<=v ? "on" : "off");
+    s.textContent = "★";
+    s.title = "クリックで変更";
+    s.addEventListener("click", ()=>{
+      const next = (v === i) ? (i-1) : i;
+      onChange(next);
+    });
+    container.appendChild(s);
+  }
+  container.ondblclick = ()=> onChange(0);
+}
+
+/* ========= Color (per category) ========= */
+function hashStr(str){
+  let h = 2166136261;
+  for (let i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h>>>0);
+}
+function catColor(catId){
+  const h = hashStr(catId) % 360;
+  return {
+    bg: `hsl(${h} 70% 92%)`,
+    bd: `hsl(${h} 60% 55%)`
+  };
+}
+
+/* ========= Normalize ========= */
+function ensureDefaults(s){
+  if (!s || typeof s !== "object") s = {};
+  if (!Array.isArray(s.cards)) s.cards = [];
+  if (!Array.isArray(s.instances)) s.instances = [];
+  if (!Array.isArray(s.categories)) s.categories = [];
+
+  const def = [
+    { id: "schedule", name: "スケジュール", kind: "schedule" },
+    { id: "task", name: "タスク", kind: "task" },
+  ];
+  const byId = new Map(s.categories.map(c=>[c.id,c]));
+  for (const d of def){
+    if (!byId.has(d.id)) s.categories.push(d);
+  }
+  s.categories = s.categories
+    .filter(c=>c && c.id && c.name)
+    .map(c=>({ id:String(c.id), name:String(c.name), kind: (c.kind==="schedule" ? "schedule" : "task") }));
+
+  const catExists = new Set(s.categories.map(c=>c.id));
+
+  for (const c of s.cards){
+    if (!("priority" in c)) c.priority = 0;
+    if (!("deadline" in c)) c.deadline = null;
+    if (!("routine" in c)) c.routine = false;
+    if (!("category_id" in c)) c.category_id = "task";
+    if (!("fixed_time" in c)) c.fixed_time = null;
+    if (!("keep_inbox" in c)) c.keep_inbox = false;
+
+    if (!Number.isFinite(c.priority)) c.priority = 0;
+    c.priority = Math.max(0, Math.min(3, Math.trunc(c.priority)));
+    if (c.deadline === "") c.deadline = null;
+
+    c.routine = !!c.routine;
+    c.keep_inbox = !!c.keep_inbox;
+
+    if (!catExists.has(c.category_id)) c.category_id = "task";
+    if (c.fixed_time === "") c.fixed_time = null;
+    if (c.fixed_time && !/^\d{2}:\d{2}$/.test(c.fixed_time)) c.fixed_time = null;
+
+    if (!Number.isFinite(c.duration_min)) c.duration_min = 30;
+    c.duration_min = Math.max(1, Math.min(24*60, Math.trunc(c.duration_min)));
+  }
+
+  s.instances = s.instances.filter(i => !(i && i.canceled));
+  for (const inst of s.instances){
+    if (!("done" in inst)) inst.done = false;
+    if (!("duration_min" in inst)) {
+      const c = s.cards.find(x=>x.id===inst.card_id);
+      inst.duration_min = c ? c.duration_min : 30;
+    }
+    if (!("date" in inst) && inst.scheduled_date) inst.date = inst.scheduled_date;
+    if (!("start_min" in inst) && Number.isFinite(inst.start)) inst.start_min = inst.start;
+    inst.done = !!inst.done;
+  }
+  return s;
+}
+
+/* ========= State ========= */
+let state = ensureDefaults(load());
+save(state);
+
+let selectedDate = ymd(new Date());
+let viewMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+let tab = "main";        // "main" | "all"
+let rightMode = "month"; // "month" | "day"
+
+let inboxFilterSet = new Set(); // empty => all
+let allFilterSet = new Set();   // empty => all
+
+let editOpen = new Set();
+let deleteArmed = new Map();
+
+let showCatMgr = false;
+
+/* ========= Category helpers ========= */
+function catById(id){
+  return state.categories.find(c=>c.id===id) || state.categories.find(c=>c.id==="task");
+}
+function isScheduleCard(card){
+  return catById(card.category_id).kind === "schedule";
+}
+function renderCategorySelect(selectEl, selectedId){
+  selectEl.innerHTML = "";
+  for (const c of state.categories){
+    const op = document.createElement("option");
+    op.value = c.id;
+    op.textContent = c.name;
+    if (c.id === selectedId) op.selected = true;
+    selectEl.appendChild(op);
+  }
+}
+function cardPassesFilter(card, filterSet){
+  if (!filterSet || filterSet.size === 0) return true;
+  return filterSet.has(card.category_id);
+}
+function isUserCategory(cat){
+  return String(cat.id).startsWith("u_");
+}
+
+/* ========= Derived ========= */
+function instancesOfCard(cardId){
+  return state.instances.filter(i => i.card_id === cardId);
+}
+function hasAnyInstance(cardId){
+  return instancesOfCard(cardId).length > 0;
+}
+function inboxCards(){
+  const raw = state.cards.filter(c => c.routine || c.keep_inbox || !hasAnyInstance(c.id));
+  return raw.filter(c => cardPassesFilter(c, inboxFilterSet));
+}
+function cardsForAllTab(){
+  return state.cards.filter(c => cardPassesFilter(c, allFilterSet));
+}
+
+/* ========= Tabs / modes ========= */
+function setTab(next){
+  tab = next;
+  document.getElementById("mainTab").style.display = (tab==="main") ? "block" : "none";
+  document.getElementById("allTab").style.display  = (tab==="all")  ? "block" : "none";
+  document.getElementById("tabMain").classList.toggle("active", tab==="main");
+  document.getElementById("tabAll").classList.toggle("active", tab==="all");
+}
+function setRightMode(next){
+  rightMode = next;
+  document.getElementById("rightMonth").style.display = (rightMode==="month") ? "block" : "none";
+  document.getElementById("rightDay").style.display   = (rightMode==="day")   ? "block" : "none";
+}
+
+/* ========= Filter UI ========= */
+function renderFilterChips(containerId, filterSet, onToggle){
+  const box = document.getElementById(containerId);
+  box.innerHTML = "";
+  for (const cat of state.categories){
+    const btn = document.createElement("span");
+    btn.className = "chipbtn" + (filterSet.size===0 || filterSet.has(cat.id) ? " on" : "");
+    btn.textContent = cat.name;
+    btn.title = "クリックで表示/非表示";
+    btn.addEventListener("click", ()=>{
+      if (filterSet.size === 0){
+        filterSet.clear();
+        filterSet.add(cat.id);
+      } else {
+        if (filterSet.has(cat.id)) filterSet.delete(cat.id);
+        else filterSet.add(cat.id);
+        if (filterSet.size === 0) { /* all */ }
+      }
+      onToggle();
+    });
+    box.appendChild(btn);
+  }
+}
+function renderLegend(containerId){
+  const box = document.getElementById(containerId);
+  box.innerHTML = "";
+  for (const cat of state.categories){
+    const {bg, bd} = catColor(cat.id);
+    const item = document.createElement("div");
+    item.className = "legendItem";
+    const sw = document.createElement("span");
+    sw.className = "swatch";
+    sw.style.background = bg;
+    sw.style.borderColor = bd;
+    const txt = document.createElement("span");
+    txt.textContent = cat.name;
+    item.appendChild(sw);
+    item.appendChild(txt);
+    box.appendChild(item);
+  }
+}
+
+/* ========= Card delete (no popup, two-step) ========= */
+function isArmed(cardId){
+  const t = deleteArmed.get(cardId);
+  if (!t) return false;
+  return (Date.now() - t) <= 4000;
+}
+function armDelete(cardId){ deleteArmed.set(cardId, Date.now()); }
+function disarmDelete(cardId){ deleteArmed.delete(cardId); }
+function deleteCard(cardId){
+  state.cards = state.cards.filter(c=>c.id!==cardId);
+  state.instances = state.instances.filter(i=>i.card_id!==cardId);
+  save(state);
+}
+
+/* ========= Time label for schedule card ========= */
+function scheduleTimeLabel(card){
+  const t = card.fixed_time || "09:00";
+  const s = hhmmToMin(t);
+  const e = s + (card.duration_min || 30);
+  return `${minToHHMM(s)}〜${minToHHMM(e)}（${card.duration_min}分）`;
+}
+
+/* ========= Render: Inbox ========= */
+function renderInbox(){
+  const inbox = document.getElementById("inbox");
+  inbox.innerHTML = "";
+
+  const cards = inboxCards();
+
+  if (cards.length === 0){
+    const p = document.createElement("div");
+    p.className = "small";
+    p.textContent = "（表示対象の未貼付カードがありません。分類フィルタを見直すか、上の入力から作成できます）";
+    inbox.appendChild(p);
+    return;
+  }
+
+  for (const c of cards){
+    const {bg, bd} = catColor(c.category_id);
+
+    const el = document.createElement("div");
+    el.className = "card" + (c.routine ? " routineCard" : "");
+    el.draggable = true;
+    el.style.setProperty("--cat-bg", bg);
+    el.style.setProperty("--cat-bd", bd);
+
+    const top = document.createElement("div");
+    top.className = "top";
+
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = c.title;
+
+    const stars = document.createElement("div");
+    stars.className = "stars";
+    renderStars(stars, c.priority, (next)=>{
+      c.priority = next;
+      save(state);
+      renderAll();
+    });
+
+    top.appendChild(title);
+    top.appendChild(stars);
+
+    const actions = document.createElement("div");
+    actions.className = "cardActions";
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "tinyBtn danger" + (isArmed(c.id) ? " confirmArmed" : "");
+    delBtn.textContent = isArmed(c.id) ? "削除する" : "削除";
+    delBtn.title = "クリック→もう一度クリックで削除（ポップアップ無し）";
+    delBtn.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      if (!isArmed(c.id)){
+        armDelete(c.id);
+        renderAll();
+        setTimeout(()=>{ if (isArmed(c.id)) { disarmDelete(c.id); renderAll(); } }, 4100);
+      } else {
+        deleteCard(c.id);
+        disarmDelete(c.id);
+        editOpen.delete(c.id);
+        renderAll();
+      }
+    });
+    actions.appendChild(delBtn);
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.title = "クリックで編集を開く/閉じる";
+
+    const catChip = document.createElement("span");
+    catChip.className = "chip";
+    catChip.textContent = catById(c.category_id).name;
+    meta.appendChild(catChip);
+
+    if (isScheduleCard(c)){
+      const tchip = document.createElement("span");
+      tchip.className = "chip";
+      tchip.textContent = scheduleTimeLabel(c);
+      meta.appendChild(tchip);
+    } else {
+      const dur = document.createElement("span");
+      dur.className = "chip";
+      dur.textContent = `${c.duration_min}分`;
+      meta.appendChild(dur);
+    }
+
+    const dl = document.createElement("span");
+    dl.className = "chip";
+    dl.textContent = c.deadline ? `締切 ${c.deadline}` : "締切なし";
+    meta.appendChild(dl);
+
+    const rt = document.createElement("span");
+    rt.className = "routineBadge";
+    rt.textContent = c.routine ? "ルーティーンON" : "ルーティーンOFF";
+    rt.title = "クリックで切替";
+    rt.style.cursor = "pointer";
+    rt.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const hadInst = hasAnyInstance(c.id);
+
+      if (c.routine){
+        c.routine = false;
+        if (hadInst) c.keep_inbox = true;
+      } else {
+        c.routine = true;
+        c.keep_inbox = false;
+      }
+      save(state);
+      renderAll();
+    });
+    meta.appendChild(rt);
+
+    meta.addEventListener("click", (e)=>{
+      if (e.target && (e.target.tagName === "BUTTON" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT")) return;
+      if (editOpen.has(c.id)) editOpen.delete(c.id);
+      else editOpen.add(c.id);
+      renderAll();
+    });
+
+    const edit = document.createElement("div");
+    edit.className = "editArea";
+    edit.style.display = editOpen.has(c.id) ? "block" : "none";
+
+    const r1 = document.createElement("div");
+    r1.className = "editRow";
+    const lbl1 = document.createElement("span"); lbl1.className="lbl"; lbl1.textContent="タイトル";
+    const titleIn = document.createElement("input");
+    titleIn.value = c.title;
+    titleIn.size = 20;
+    titleIn.addEventListener("input", ()=>{
+      c.title = titleIn.value;
+      save(state);
+      renderAll();
+    });
+
+    const lblCat = document.createElement("span"); lblCat.className="lbl"; lblCat.textContent="分類";
+    const catSel = document.createElement("select");
+    renderCategorySelect(catSel, c.category_id);
+    catSel.addEventListener("change", ()=>{
+      c.category_id = catSel.value;
+      if (isScheduleCard(c) && !c.fixed_time) c.fixed_time = "09:00";
+      save(state);
+      renderAll();
+    });
+
+    r1.appendChild(lbl1); r1.appendChild(titleIn);
+    r1.appendChild(lblCat); r1.appendChild(catSel);
+
+    const r2 = document.createElement("div");
+    r2.className = "editRow";
+
+    if (isScheduleCard(c)){
+      const lblFx = document.createElement("span"); lblFx.className="lbl"; lblFx.textContent="時刻";
+      const fxIn = document.createElement("input");
+      fxIn.type = "time";
+      fxIn.step = "900";
+      fxIn.value = c.fixed_time || "09:00";
+      fxIn.addEventListener("change", ()=>{
+        c.fixed_time = fxIn.value || "09:00";
+        save(state);
+        renderAll();
+      });
+      r2.appendChild(lblFx);
+      r2.appendChild(fxIn);
+    }
+
+    const lblDur = document.createElement("span"); lblDur.className="lbl"; lblDur.textContent="所要(分)";
+    const durIn = document.createElement("input");
+    durIn.value = String(c.duration_min);
+    durIn.size = 6;
+    durIn.addEventListener("change", ()=>{
+      const v = parseInt(durIn.value,10);
+      c.duration_min = Number.isFinite(v) && v>0 ? v : 30;
+      save(state);
+      renderAll();
+    });
+
+    const lblDl = document.createElement("span"); lblDl.className="lbl"; lblDl.textContent="締切";
+    const dlIn = document.createElement("input");
+    dlIn.type = "date";
+    dlIn.value = c.deadline || "";
+    dlIn.addEventListener("change", ()=>{
+      c.deadline = dlIn.value || null;
+      save(state);
+      renderAll();
+    });
+
+    r2.appendChild(lblDur); r2.appendChild(durIn);
+    r2.appendChild(lblDl); r2.appendChild(dlIn);
+
+    edit.appendChild(r1);
+    edit.appendChild(r2);
+
+    el.addEventListener("dragstart", (e)=>{
+      e.dataTransfer.setData("text/plain", c.id);
+    });
+
+    el.appendChild(actions);
+    el.appendChild(top);
+    el.appendChild(meta);
+    el.appendChild(edit);
+
+    inbox.appendChild(el);
+  }
+}
+
+/* ========= Render: Month ========= */
+function renderCalendar(){
+  const cal = document.getElementById("calendar");
+  const label = document.getElementById("monthLabel");
+  label.textContent = monthLabel(viewMonth);
+
+  cal.innerHTML = "";
+  const cells = buildMonthCells(viewMonth);
+  const hasInstByDate = new Set(state.instances.map(i=>i.date));
+
+  for (const cell of cells){
+    const el = document.createElement("div");
+    el.className = "cal-cell" + (cell.inMonth ? "" : " muted") + (cell.ymd === selectedDate ? " selected" : "");
+    el.innerHTML = `<div>${cell.date.getDate()}</div>` + (hasInstByDate.has(cell.ymd) ? `<span class="dot" title="予定あり"></span>` : "");
+    el.addEventListener("click", ()=>{
+      selectedDate = cell.ymd;
+      document.getElementById("datePicker").value = selectedDate;
+      const [y,m] = selectedDate.split("-").map(x=>parseInt(x,10));
+      viewMonth = new Date(y, m-1, 1);
+      setRightMode("day");
+      renderAll();
+    });
+    cal.appendChild(el);
+  }
+}
+
+/* ========= Render: Day ========= */
+function renderDay(){
+  document.getElementById("dayTitle").textContent = `予定：${formatJP(selectedDate)}`;
+  document.getElementById("datePicker").value = selectedDate;
+
+  const slot = document.getElementById("today");
+  slot.innerHTML = "";
+
+  const insts = getDayInstances(state, selectedDate);
+
+  if (insts.length === 0){
+    const p = document.createElement("div");
+    p.className = "small";
+    p.textContent = "（まだ予定がありません。左のカードをドラッグして追加）";
+    slot.appendChild(p);
+  }
+
+  for (const inst of insts){
+    const card = state.cards.find(c=>c.id===inst.card_id);
+    const titleText = card ? card.title : "(missing)";
+    const dur = inst.duration_min ?? (card ? card.duration_min : 30);
+
+    const fixed = card && isScheduleCard(card) && card.fixed_time;
+    const start = fixed ? hhmmToMin(card.fixed_time) : (Number.isFinite(inst.start_min) ? inst.start_min : DEFAULT_START);
+    const end = start + dur;
+
+    const catId = card ? card.category_id : "task";
+    const {bg, bd} = catColor(catId);
+
+    const wrap = document.createElement("div");
+    wrap.className = "inst" + (inst.done ? " done" : "");
+    wrap.style.setProperty("--cat-bg", bg);
+    wrap.style.setProperty("--cat-bd", bd);
+
+    const left = document.createElement("div");
+
+    const title = document.createElement("div");
+    title.className = "title";
+
+    const name = document.createElement("span");
+    name.textContent = titleText;
+
+    const stars = document.createElement("span");
+    stars.className = "stars";
+    renderStars(stars, card ? card.priority : 0, ()=>{});
+
+    title.appendChild(name);
+    title.appendChild(stars);
+
+    const time = document.createElement("div");
+    time.className = "time";
+
+    const catChip = document.createElement("span");
+    catChip.className = "chip";
+    catChip.textContent = card ? catById(card.category_id).name : "—";
+    time.appendChild(catChip);
+
+    const t1 = document.createElement("span");
+    t1.className = "chip";
+    t1.textContent = `${minToHHMM(start)} 〜 ${minToHHMM(end)}（${dur}分）`;
+    time.appendChild(t1);
+
+    if (fixed){
+      const fx = document.createElement("span");
+      fx.className = "chip";
+      fx.textContent = "時刻固定";
+      time.appendChild(fx);
+    }
+
+    if (card && card.deadline){
+      const dl = document.createElement("span");
+      dl.className = "chip";
+      dl.textContent = `締切 ${card.deadline}`;
+      time.appendChild(dl);
+    }
+    if (card && card.routine){
+      const rt = document.createElement("span");
+      rt.className = "chip";
+      rt.textContent = "ルーティーン";
+      time.appendChild(rt);
+    }
+
+    left.appendChild(title);
+    left.appendChild(time);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+
+    const sel = document.createElement("select");
+    sel.disabled = !!fixed;
+    for (const t of TIME_OPTS){
+      const op = document.createElement("option");
+      op.value = t;
+      op.textContent = t;
+      if (hhmmToMin(t) === start) op.selected = true;
+      sel.appendChild(op);
+    }
+    sel.addEventListener("change", ()=>{
+      inst.start_min = hhmmToMin(sel.value);
+      save(state);
+      renderAll();
+    });
+
+    const lab = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!inst.done;
+    cb.addEventListener("change", ()=>{
+      inst.done = cb.checked;
+      save(state);
+      renderAll();
+    });
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode("完了"));
+
+    const backBtn = document.createElement("button");
+    backBtn.className = "btnSubtle";
+    backBtn.textContent = "戻す";
+    backBtn.title = "この予定を消します（履歴は残しません）";
+    backBtn.addEventListener("click", ()=>{
+      state.instances = state.instances.filter(x => x.id !== inst.id);
+      save(state);
+      renderAll();
+    });
+
+    actions.appendChild(sel);
+    actions.appendChild(lab);
+    actions.appendChild(backBtn);
+
+    wrap.appendChild(left);
+    wrap.appendChild(actions);
+    slot.appendChild(wrap);
+  }
+}
+
+/* ========= Category Manager ========= */
+function renderCatManager(){
+  const box = document.getElementById("catMgrBox");
+  box.style.display = showCatMgr ? "block" : "none";
+  if (!showCatMgr) return;
+
+  const list = document.getElementById("catMgrList");
+  list.innerHTML = "";
+
+  for (const cat of state.categories){
+    const row = document.createElement("div");
+    row.className = "mgrRow";
+
+    const {bg, bd} = catColor(cat.id);
+    const sw = document.createElement("span");
+    sw.className = "swatch";
+    sw.style.background = bg;
+    sw.style.borderColor = bd;
+
+    const nameIn = document.createElement("input");
+    nameIn.className = "nameIn";
+    nameIn.value = cat.name;
+    nameIn.size = 18;
+
+    const note = document.createElement("span");
+    note.className = "note";
+    note.textContent = (cat.kind === "schedule") ? "（スケジュール扱い）" : "（タスク扱い）";
+
+    const spacer = document.createElement("span");
+    spacer.className = "spacer";
+
+    const canEdit = isUserCategory(cat);
+    nameIn.disabled = !canEdit;
+
+    nameIn.addEventListener("change", ()=>{
+      if (!canEdit) return;
+      const v = nameIn.value.trim();
+      if (!v) { nameIn.value = cat.name; return; }
+      cat.name = v;
+      save(state);
+      renderAll();
+    });
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "tinyBtn danger";
+    delBtn.textContent = "削除";
+    delBtn.disabled = !canEdit;
+    delBtn.title = "削除すると、この分類のカードはタスクに移されます";
+
+    delBtn.addEventListener("click", ()=>{
+      if (!canEdit) return;
+      const ok = window.confirm(`分類「${cat.name}」を削除しますか？\nこの分類のカードは「タスク」に移されます。`);
+      if (!ok) return;
+
+      for (const c of state.cards){
+        if (c.category_id === cat.id) c.category_id = "task";
+      }
+
+      state.categories = state.categories.filter(x => x.id !== cat.id);
+
+      inboxFilterSet.delete(cat.id);
+      allFilterSet.delete(cat.id);
+
+      const headerSel = document.getElementById("catSelect");
+      if (headerSel.value === cat.id) headerSel.value = "task";
+
+      save(state);
+      renderAll();
+    });
+
+    row.appendChild(sw);
+    row.appendChild(nameIn);
+    row.appendChild(note);
+    row.appendChild(spacer);
+    row.appendChild(delBtn);
+
+    list.appendChild(row);
+  }
+}
+
+/* ========= Render: All tab ========= */
+function renderAllList(){
+  const list = document.getElementById("allList");
+  list.innerHTML = "";
+
+  document.getElementById("countCards").textContent = String(state.cards.length);
+  document.getElementById("countInstances").textContent = String(state.instances.length);
+  document.getElementById("countInbox").textContent = String(state.cards.filter(c => c.routine || c.keep_inbox || !hasAnyInstance(c.id)).length);
+
+  const cardsSorted = cardsForAllTab().slice().sort((a,b)=>{
+    const ad = a.deadline ? a.deadline : "9999-12-31";
+    const bd = b.deadline ? b.deadline : "9999-12-31";
+    if (ad < bd) return -1;
+    if (ad > bd) return 1;
+    if ((b.priority|0) !== (a.priority|0)) return (b.priority|0) - (a.priority|0);
+    return String(a.title).localeCompare(String(b.title), "ja");
+  });
+
+  if (cardsSorted.length === 0){
+    const p = document.createElement("div");
+    p.className = "small";
+    p.textContent = "（表示対象のカードがありません。分類フィルタを見直してください）";
+    list.appendChild(p);
+    return;
+  }
+
+  for (const c of cardsSorted){
+    const box = document.createElement("div");
+    box.className = "listCard" + (c.routine ? " routineCard" : "");
+
+    const head = document.createElement("div");
+    head.className = "head";
+
+    const left = document.createElement("div");
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "kcol";
+
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = c.title;
+
+    const stars = document.createElement("span");
+    stars.className = "stars";
+    renderStars(stars, c.priority, (next)=>{
+      c.priority = next;
+      save(state);
+      renderAll();
+    });
+
+    nameRow.appendChild(name);
+    nameRow.appendChild(stars);
+
+    const sub = document.createElement("div");
+    sub.className = "sub";
+
+    const catSel = document.createElement("select");
+    renderCategorySelect(catSel, c.category_id);
+    catSel.addEventListener("change", ()=>{
+      c.category_id = catSel.value;
+      if (isScheduleCard(c) && !c.fixed_time) c.fixed_time = "09:00";
+      save(state);
+      renderAll();
+    });
+    sub.appendChild(catSel);
+
+    const fxWrap = document.createElement("span");
+    fxWrap.className = "chip";
+    fxWrap.style.display = isScheduleCard(c) ? "inline-flex" : "none";
+    fxWrap.style.gap = "6px";
+    fxWrap.style.alignItems = "center";
+    const fxLab = document.createElement("span");
+    fxLab.textContent = "時刻";
+    const fxIn = document.createElement("input");
+    fxIn.type = "time";
+    fxIn.step = "900";
+    fxIn.value = c.fixed_time || "09:00";
+    fxIn.addEventListener("change", ()=>{
+      c.fixed_time = fxIn.value || "09:00";
+      save(state);
+      renderAll();
+    });
+    fxWrap.appendChild(fxLab);
+    fxWrap.appendChild(fxIn);
+    sub.appendChild(fxWrap);
+
+    const durWrap = document.createElement("span");
+    durWrap.className = "chip";
+    durWrap.style.display = "inline-flex";
+    durWrap.style.gap = "6px";
+    durWrap.style.alignItems = "center";
+    const durLab = document.createElement("span");
+    durLab.textContent = "分";
+    const durIn = document.createElement("input");
+    durIn.value = String(c.duration_min);
+    durIn.size = 6;
+    durIn.addEventListener("change", ()=>{
+      const v = parseInt(durIn.value,10);
+      c.duration_min = Number.isFinite(v) && v>0 ? v : 30;
+      save(state);
+      renderAll();
+    });
+    durWrap.appendChild(durIn);
+    durWrap.appendChild(durLab);
+    sub.appendChild(durWrap);
+
+    const dlWrap = document.createElement("span");
+    dlWrap.className = "chip";
+    dlWrap.style.display = "inline-flex";
+    dlWrap.style.gap = "6px";
+    dlWrap.style.alignItems = "center";
+    const dlLab = document.createElement("span");
+    dlLab.textContent = "締切";
+    const dlIn = document.createElement("input");
+    dlIn.type = "date";
+    dlIn.value = c.deadline || "";
+    dlIn.addEventListener("change", ()=>{
+      c.deadline = dlIn.value || null;
+      save(state);
+      renderAll();
+    });
+    dlWrap.appendChild(dlLab);
+    dlWrap.appendChild(dlIn);
+    sub.appendChild(dlWrap);
+
+    const rt = document.createElement("label");
+    rt.className = "chip";
+    rt.style.display = "inline-flex";
+    rt.style.gap = "6px";
+    rt.style.alignItems = "center";
+    rt.style.cursor = "pointer";
+    const rcb = document.createElement("input");
+    rcb.type = "checkbox";
+    rcb.checked = !!c.routine;
+    rcb.addEventListener("change", ()=>{
+      const hadInst = hasAnyInstance(c.id);
+      if (rcb.checked){
+        c.routine = true;
+        c.keep_inbox = false;
+      } else {
+        c.routine = false;
+        if (hadInst) c.keep_inbox = true;
+      }
+      save(state);
+      renderAll();
+    });
+    rt.appendChild(rcb);
+    rt.appendChild(document.createTextNode("ルーティーン"));
+    sub.appendChild(rt);
+
+    left.appendChild(nameRow);
+    left.appendChild(sub);
+
+    head.appendChild(left);
+    box.appendChild(head);
+
+    const insts = state.instances
+      .filter(i => i.card_id === c.id)
+      .slice()
+      .sort((a,b)=>{
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return (a.start_min ?? 0) - (b.start_min ?? 0);
+      });
+
+    const instWrap = document.createElement("div");
+    instWrap.className = "instList";
+
+    const cap = document.createElement("div");
+    cap.className = "small";
+    cap.textContent = `予定：${insts.length}件`;
+    instWrap.appendChild(cap);
+
+    if (insts.length === 0){
+      const p = document.createElement("div");
+      p.className = "small";
+      p.style.marginTop = "8px";
+      p.textContent = "（このカードはまだ貼り付けされていません）";
+      instWrap.appendChild(p);
+    }
+
+    for (const inst of insts){
+      const li = document.createElement("div");
+      li.className = "listInst" + (inst.done ? " done" : "");
+
+      const l = document.createElement("div");
+      l.style.display = "flex";
+      l.style.flexDirection = "column";
+      l.style.gap = "2px";
+
+      const line1 = document.createElement("div");
+
+      const datePill = document.createElement("span");
+      datePill.className = "pill";
+      datePill.textContent = inst.date;
+      datePill.title = "クリックでその日を開く";
+      datePill.style.cursor = "pointer";
+      datePill.addEventListener("click", ()=>{
+        selectedDate = inst.date;
+        const [y,m] = selectedDate.split("-").map(x=>parseInt(x,10));
+        viewMonth = new Date(y, m-1, 1);
+        document.getElementById("datePicker").value = selectedDate;
+        setTab("main");
+        setRightMode("day");
+        renderAll();
+      });
+
+      const fixed = isScheduleCard(c) && c.fixed_time;
+      const smin = fixed ? hhmmToMin(c.fixed_time) : (Number.isFinite(inst.start_min) ? inst.start_min : DEFAULT_START);
+      const emin = smin + (inst.duration_min ?? c.duration_min);
+
+      const timePill = document.createElement("span");
+      timePill.className = "pill";
+      timePill.textContent = `${minToHHMM(smin)}〜${minToHHMM(emin)}`;
+
+      const catPill = document.createElement("span");
+      catPill.className = "pill";
+      catPill.textContent = catById(c.category_id).name;
+
+      line1.appendChild(datePill);
+      line1.appendChild(document.createTextNode(" "));
+      line1.appendChild(timePill);
+      line1.appendChild(document.createTextNode(" "));
+      line1.appendChild(catPill);
+
+      if (fixed){
+        const fxP = document.createElement("span");
+        fxP.className = "pill";
+        fxP.textContent = "時刻固定";
+        line1.appendChild(document.createTextNode(" "));
+        line1.appendChild(fxP);
+      }
+
+      l.appendChild(line1);
+
+      const r = document.createElement("div");
+      r.style.display = "flex";
+      r.style.gap = "8px";
+      r.style.alignItems = "center";
+
+      const lab = document.createElement("label");
+      lab.className = "mini";
+      lab.style.display = "flex";
+      lab.style.gap = "6px";
+      lab.style.alignItems = "center";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !!inst.done;
+      cb.addEventListener("change", ()=>{
+        inst.done = cb.checked;
+        save(state);
+        renderAll();
+      });
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode("完了"));
+
+      const backBtn = document.createElement("button");
+      backBtn.className = "btnSubtle";
+      backBtn.textContent = "戻す";
+      backBtn.title = "この予定を消します（履歴は残しません）";
+      backBtn.addEventListener("click", ()=>{
+        state.instances = state.instances.filter(x => x.id !== inst.id);
+        save(state);
+        renderAll();
+      });
+
+      r.appendChild(lab);
+      r.appendChild(backBtn);
+
+      li.appendChild(l);
+      li.appendChild(r);
+      instWrap.appendChild(li);
+    }
+
+    box.appendChild(instWrap);
+    list.appendChild(box);
+  }
+}
+
+/* ========= Global render ========= */
+function renderAll(){
+  document.getElementById("mainTab").style.display = (tab==="main") ? "block" : "none";
+  document.getElementById("allTab").style.display  = (tab==="all")  ? "block" : "none";
+  document.getElementById("tabMain").classList.toggle("active", tab==="main");
+  document.getElementById("tabAll").classList.toggle("active", tab==="all");
+
+  setRightMode(rightMode);
+
+  renderCategorySelect(document.getElementById("catSelect"), document.getElementById("catSelect").value || "task");
+
+  const selectedCat = document.getElementById("catSelect").value || "task";
+  const kind = catById(selectedCat).kind;
+  document.getElementById("fixedTimeWrap").style.display = (kind === "schedule") ? "flex" : "none";
+  if (kind === "schedule" && !document.getElementById("fixedTime").value){
+    document.getElementById("fixedTime").value = "09:00";
+  }
+
+  renderFilterChips("inboxFilters", inboxFilterSet, renderAll);
+  renderFilterChips("allFilters", allFilterSet, renderAll);
+  renderLegend("inboxLegend");
+
+  if (tab === "main"){
+    renderInbox();
+    if (rightMode === "month") renderCalendar();
+    if (rightMode === "day") renderDay();
+  } else {
+    renderCatManager();
+    renderAllList();
+  }
+}
+
+/* ========= Init UI ========= */
+(function initUI(){
+  const sel = document.getElementById("catSelect");
+  renderCategorySelect(sel, "task");
+  sel.addEventListener("change", ()=> renderAll());
+
+  const topBox = document.getElementById("addCatTopBox");
+  document.getElementById("openAddCatTop").addEventListener("click", ()=>{
+    topBox.style.display = (topBox.style.display === "block") ? "none" : "block";
+  });
+  document.getElementById("closeAddCatTop").addEventListener("click", ()=>{
+    topBox.style.display = "none";
+  });
+  document.getElementById("addCatTop").addEventListener("click", ()=>{
+    const name = document.getElementById("newCatNameTop").value.trim();
+    if (!name) return;
+    const id = "u_" + uid();
+    state.categories.push({ id, name, kind: "task" });
+    save(state);
+    document.getElementById("newCatNameTop").value = "";
+    renderAll();
+  });
+
+  document.getElementById("addCat").addEventListener("click", ()=>{
+    const name = document.getElementById("newCatName").value.trim();
+    if (!name) return;
+    const id = "u_" + uid();
+    state.categories.push({ id, name, kind: "task" });
+    save(state);
+    document.getElementById("newCatName").value = "";
+    renderAll();
+  });
+
+  document.getElementById("toggleCatMgr").addEventListener("click", ()=>{
+    showCatMgr = !showCatMgr;
+    renderAll();
+  });
+  document.getElementById("closeCatMgr").addEventListener("click", ()=>{
+    showCatMgr = false;
+    renderAll();
+  });
+
+  document.getElementById("resetInboxFilter").addEventListener("click", ()=>{
+    inboxFilterSet.clear();
+    renderAll();
+  });
+  document.getElementById("resetAllFilter").addEventListener("click", ()=>{
+    allFilterSet.clear();
+    renderAll();
+  });
+
+  document.getElementById("tabMain").addEventListener("click", ()=>{ setTab("main"); renderAll(); });
+  document.getElementById("tabAll").addEventListener("click", ()=>{ setTab("all"); renderAll(); });
+
+  document.getElementById("prevMonth").addEventListener("click", ()=>{
+    viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth()-1, 1);
+    renderCalendar();
+  });
+  document.getElementById("nextMonth").addEventListener("click", ()=>{
+    viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth()+1, 1);
+    renderCalendar();
+  });
+  document.getElementById("todayBtn").addEventListener("click", ()=>{
+    const now = new Date();
+    selectedDate = ymd(now);
+    viewMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    renderAll();
+  });
+
+  document.getElementById("backToCalendar").addEventListener("click", ()=>{
+    setRightMode("month");
+    renderAll();
+  });
+  document.getElementById("datePicker").addEventListener("change", (e)=>{
+    const v = e.target.value;
+    if (!v) return;
+    selectedDate = v;
+    const [y,m] = selectedDate.split("-").map(x=>parseInt(x,10));
+    viewMonth = new Date(y, m-1, 1);
+    setRightMode("day");
+    renderAll();
+  });
+
+  document.getElementById("jumpBtn").addEventListener("click", ()=>{
+    const v = document.getElementById("jumpDate").value;
+    if (!v) return;
+    selectedDate = v;
+    const [y,m] = selectedDate.split("-").map(x=>parseInt(x,10));
+    viewMonth = new Date(y, m-1, 1);
+    document.getElementById("datePicker").value = selectedDate;
+    setTab("main");
+    setRightMode("day");
+    renderAll();
+  });
+
+  let prioDraft = 0;
+  function renderPrioDraft(){
+    const c = document.getElementById("prioInput");
+    renderStars(c, prioDraft, (next)=>{ prioDraft = next; renderPrioDraft(); });
+  }
+  renderPrioDraft();
+
+  document.getElementById("add").addEventListener("click", ()=>{
+    const title = document.getElementById("title").value.trim();
+    const durRaw = document.getElementById("dur").value.trim();
+    const dur = parseInt(durRaw, 10);
+    const deadline = document.getElementById("deadline").value || null;
+    const routine = document.getElementById("routineInput").checked;
+
+    const category_id = document.getElementById("catSelect").value || "task";
+    const kind = catById(category_id).kind;
+    const fixed_time = (kind === "schedule") ? (document.getElementById("fixedTime").value || "09:00") : null;
+
+    if (!title) return;
+    const duration_min = Number.isFinite(dur) && dur > 0 ? dur : 30;
+
+    state.cards.unshift({
+      id: uid(),
+      title,
+      duration_min,
+      priority: prioDraft || 0,
+      routine: !!routine,
+      deadline,
+      category_id,
+      fixed_time,
+      keep_inbox: false
+    });
+
+    save(state);
+
+    document.getElementById("title").value = "";
+    document.getElementById("dur").value = "";
+    document.getElementById("deadline").value = "";
+    document.getElementById("routineInput").checked = false;
+    prioDraft = 0;
+    renderPrioDraft();
+
+    renderAll();
+  });
+
+  const slot = document.getElementById("today");
+  slot.addEventListener("dragover", (e)=>e.preventDefault());
+  slot.addEventListener("drop", (e)=>{
+    e.preventDefault();
+    const cardId = e.dataTransfer.getData("text/plain");
+    if (!cardId) return;
+
+    const card = state.cards.find(c=>c.id===cardId);
+    if (!card) return;
+
+    const fixed = isScheduleCard(card) && card.fixed_time;
+    const start_min = fixed ? hhmmToMin(card.fixed_time) : findFirstFreeStart(state, selectedDate, card.duration_min);
+
+    state.instances.push({
+      id: uid(),
+      card_id: cardId,
+      date: selectedDate,
+      start_min,
+      duration_min: card.duration_min,
+      done: false
+    });
+
+    if (card.keep_inbox) card.keep_inbox = false;
+
+    save(state);
+    renderAll();
+  });
+
+  setTab("main");
+  setRightMode("month");
+  renderAll();
+})();
+
+/* ========= PWA: register service worker ========= */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Keeph mini",
+  "short_name": "Keeph",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#f0f0f0",
+  "description": "Keeph mini - task/schedule scratch (local)",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}
